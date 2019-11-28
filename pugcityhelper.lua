@@ -1,10 +1,4 @@
--- place this file inside of a folder (pj), the folder being at the same level of piepan.exe
--- i mean you dont NEED to put it in a folder but the code is written for scripts in a folder.
--- if you're gonna want your bot to do anything besides type in chat, you'll need to certify it so you can register it as an admin. run this cmd:
--- openssl req -x509 -newkey rsa:2048 -keyout pjkey.pem -out pjcert.pem -days 1000 -nodes             | file names dont matter but the extension does. will output to cwd
 -- run this cmd from piepan dir: piepan -server="voice.enslow.me:42069" -username="BOT-Poopy-Joe" -certificate="pjcert.pem" -key="pjkey.pem"  pj\pugcityhelper.lua
--- alternatively, replace -certificate and -key with -insecure and it'll be able to connect and chat but, you know, you cant register it.
--- alternatively, Zidgel could give you the certificate and key files.
 
 admins = { --there should be an easier way to do this by simply grabbing the list of admins from an ACL https://godoc.org/layeh.com/gumble/gumble#ACLGroup I think the pertinent method is UserAdd?
 "wolsne",
