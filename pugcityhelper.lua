@@ -66,11 +66,11 @@ function roll()
 	return n                                --returns the random number
 end
 
-piepan.On("userChange", function(u)
-	--[[if u.IsConnected then --cant figure out how to get this to work. It would be nice to automatically add users to usersAlpha on connection, then we would only need to resort on each roll (instead of refinding the entire table), i.e. we could eliminate the for loop that's currently at line 47-49.
+--[[piepan.On("userChange", function(u)
+	if u.IsConnected then --cant figure out how to get this to work. It would be nice to automatically add users to usersAlpha on connection, then we would only need to resort on each roll (instead of refinding the entire table), i.e. we could eliminate the for loop that's currently at line 47-49.
 		print("Connection")
-	end]]--
-end)
+	end
+end)]]--
 
 piepan.On("message", function(m)
 	if m.sender == nil then
