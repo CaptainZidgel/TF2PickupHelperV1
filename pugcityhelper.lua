@@ -10,9 +10,6 @@ admins = { --there should be an easier way to do this by simply grabbing the lis
 "Dale"
 }
 
---inspect = require 'lib.inspect'
-
---usersAlpha = {}		--creates a table of users for use in alphabetizing
 pastmedics = {}
 
 piepan.On("connect", function()
@@ -22,7 +19,15 @@ piepan.On("connect", function()
 	fatkids = root:Find("Inhouse Pugs (Nut City)", "Add Up", "Fat Kids")
 	spacebase = root:Find("Inhouse Pugs (Nut City)", "Poopy Joes Space Base")
 	pugroomone = root:Find("Inhouse Pugs (Nut City)", "Add Up", "Pug Server 1")
+	connectlobby = root:Find("Inhouse Pugs (Nut City)", "Connection Lobby")
 	piepan.Self:Move(spacebase)
+	players = {}
+	for _,u in piepan.Users() do
+		if u.Name ~= "BOT-Poopy-Joe" then
+			print("Found " .. u.Name .. ", listing in players table.")
+			players[u.Name:lower()] = {isHere = true, medicImmunity = false} --generate them
+		end
+	end
 end)
 
 function senderIsAdmin(s)
@@ -62,39 +67,26 @@ function roll(t)
 	local i = 1
 	local userTesting
 	while true do
-		local s = i						--the starting 'i' value, i use this to sense if i changes during a loop 
-		userTesting = usersAlpha[t[i]]:lower()
-		if #pastmedics >= #addup.Users then
+		if i > #addup.Users then		--if iterations surpasses the number of users added up
 			print("Run out of people to test")
 			addup:Send("Hey uh I think everyone here has played Medic? Not sure though, I might be coded wrong. Do a double check, and if you need to do a medic reset just have an admin do !clearmh", true)
 			return
 		else
-			for _,p in ipairs(pastmedics) do
-				print("Testing " .. userTesting .. " against " .. p)
-				if p == userTesting then
-					i = i + 1
-					print('They match')
-				end
-			end
-			if s == i then
-				print("They didn't match")
+			userTesting = usersAlpha[t[i]]:lower()
+			if players[userTesting].medicImmunity == true then
+				print(userTesting .. " has immunity, continuing...")
+				i = i + 1
+			elseif players[userTesting].medicImmunity == false then
+				print(userTesting .. " doesn't have immunity, breaking loop.")
 				break
 			end
 		end
 	end
-	print("Continuing with medic picks... pick: " .. userTesting)
+	print("Selecting medic: " .. userTesting)
 	addup:Send("Medic: " .. userTesting .. " (" .. t[i] .. ")", true)
-	table.insert(pastmedics, userTesting:lower())
+	players[userTesting].medicImmunity = true
 	return i                               --returns the random number
 end
-
-piepan.On("userChange", function(u)
-	if u.IsConnected then --cant figure out how to get this to work. It would be nice to automatically add users to usersAlpha on connection, then we would only need to resort on each roll (instead of refinding the entire table), i.e. we could eliminate the for loop that's currently at line 47-49.
-		print("Connection")
-	end
-end)
-
-meds = {}	--current medics (no past meds)
 
 piepan.On("message", function(m)
 	if m.sender == nil then
@@ -154,7 +146,42 @@ piepan.On("message", function(m)
 			if m.Message == "!admins" then
 				root:RequestACL()
 			end
+			if string.find(m.Message, "!strike", 1) == 1 then
+				local player = m.Message:sub(9)
+				players[player:lower()].medicImmunity = false
+				addup:Send(m.Sender.Name .. " strikes " .. player .. " from Medic history", true)
+				addup:Send(tostring(players[player:lower()].medicImmunity), true)
+			end
+			if string.find(m.Message, "!ami", 1) == 1 then
+				local player = m.Message:sub(6):lower()
+				players[player].medicImmunity = true
+				addup:Send(m.Sender.Name .. " has given " .. player .. " medic immunity!", true)
+			end
+			if m.Message == "!list" then
+				for k,v in pairs(players) do
+					print(k)
+					print(v.medicImmunity)
+				end
+			end
 			
 		end
+	end
+end)
+
+piepan.On("userchange", function(u) --userchange has to be lowercase
+	if u.IsConnected then			--a user connection event
+		print(u.User.Name .. " has connected")
+		connectlobby:Send("Hello " .. u.User.Name, true)--u.User is the user who triggered the event
+		local individual = u.User.Name:lower()			--user 'individual' has the name of the connected user in all lowercase
+		if players[individual] == nil then				--if user is not saved to the table
+			players[individual] = {isHere = true, medicImmunity = false} --generate them
+		else
+			players[individual].isHere = true			--otherwise, modify table (Don't clear med immunity)
+		end
+	end
+	if u.IsDisconnected then							--a user disconnect event
+		print(u.User.Name .. " has disconnected.")
+		local individual = u.User.Name:lower()
+		players[individual].isHere = false				--this user is no longer here
 	end
 end)
