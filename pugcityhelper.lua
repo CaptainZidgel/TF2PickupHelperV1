@@ -1,5 +1,3 @@
--- run this cmd from piepan dir: piepan -server="voice.enslow.me:42069" -username="BOT-Poopy-Joe" -certificate="pjcert.pem" -key="pjkey.pem"  pj\pugcityhelper.lua
-
 admins = { --there should be an easier way to do this by simply grabbing the list of admins from an ACL https://godoc.org/layeh.com/gumble/gumble#ACLGroup I think the pertinent method is UserAdd?
 "wolsne",
 "pizza_fart",
@@ -12,7 +10,9 @@ admins = { --there should be an easier way to do this by simply grabbing the lis
 "Dale"
 }
 
-usersAlpha = {}		--creates a table of users for use in alphabetizing
+--inspect = require 'lib.inspect'
+
+--usersAlpha = {}		--creates a table of users for use in alphabetizing
 pastmedics = {}
 
 piepan.On("connect", function()
@@ -33,44 +33,68 @@ function senderIsAdmin(s)
 	end
 end
 
-function checkMedsHist(newmed) --we pass the Name to this param, not the User object
-	for _,oldmedic in ipairs(pastmedics) do
-		print(oldmedic)
-		if oldmedic == newmed then
-			return true
-		end
-	end
-end
-
-function roll()
-	usersAlpha = {}				--if the users table is empty, generate it
-	for _,u in addup:Users() do			--iterates on all users added up, "u" is one user
-		table.insert(usersAlpha, u.Name)--places them into talbe
+function generateUsersAlpha()
+	usersAlpha = {}							--if the users table is empty, generate it
+	for _,u in addup:Users() do				--iterates on all users added up, "u" is one user
+		table.insert(usersAlpha, u.Name:lower())	--places them into table
 	end					
 	table.sort(usersAlpha)
-	math.randomseed(os.time())				--seed based on current second
-	local n = math.random(1, #addup.Users)	--pick random player
-	local userToTest = usersAlpha[n]					--find player based on their position in an alphabetized list (the way mumble sorts users in a channel)
-	for _,pmedic in ipairs(pastmedics) do		--iterates on list of previous medics. pmedic is a previous medic --this whole loop needs to be rewritten i think, to be clear
-		if pmedic:lower() == userToTest:lower() then
-			if #pastmedics < #addup.Users - 1 then
-				return roll()
-			else
-				print("Run out of players to test")
+end
+
+function randomTable(n)
+	math.randomseed(os.time())
+	local ordered = {}			--ignore the name. just pretend it says "table". by the end of this, the "ordered" table will be completely random.
+	for i = 1, n, 1 do
+		table.insert(ordered, i)
+	end
+	local r, tmp
+	for i = 1, #ordered do			--for every item in ordered table
+		r = math.random(i, #ordered)--r becomes a random number that is the length of ordered or less
+		tmp = ordered[i]			--tmp var stores the ith value of ordered
+		ordered[i] = ordered[r]		--the ith space of ordered is replaced with the rth item
+		ordered[r] = tmp			--the rth item becomes the ith item. graph: https://imgur.com/a/6pnEMRf
+	end
+	return ordered
+end
+
+function roll(t)
+	print("Trying to get a new medic pick...")
+	local i = 1
+	local userTesting
+	while true do
+		local s = i						--the starting 'i' value, i use this to sense if i changes during a loop 
+		userTesting = usersAlpha[t[i]]:lower()
+		if #pastmedics >= #addup.Users then
+			print("Run out of people to test")
+			addup:Send("Hey uh I think everyone here has played Medic? Not sure though, I might be coded wrong. Do a double check, and if you need to do a medic reset just have an admin do !clearmh", true)
+			return
+		else
+			for _,p in ipairs(pastmedics) do
+				print("Testing " .. userTesting .. " against " .. p)
+				if p == userTesting then
+					i = i + 1
+					print('They match')
+				end
+			end
+			if s == i then
+				print("They didn't match")
 				break
 			end
 		end
 	end
-	print(tostring(n) .. " " .. userToTest)
-	table.insert(pastmedics, userToTest)
-	return n                                --returns the random number
+	print("Continuing with medic picks... pick: " .. userTesting)
+	addup:Send("Medic: " .. userTesting .. " (" .. t[i] .. ")", true)
+	table.insert(pastmedics, userTesting:lower())
+	return i                               --returns the random number
 end
 
---[[piepan.On("userChange", function(u)
+piepan.On("userChange", function(u)
 	if u.IsConnected then --cant figure out how to get this to work. It would be nice to automatically add users to usersAlpha on connection, then we would only need to resort on each roll (instead of refinding the entire table), i.e. we could eliminate the for loop that's currently at line 47-49.
 		print("Connection")
 	end
-end)]]--
+end)
+
+meds = {}	--current medics (no past meds)
 
 piepan.On("message", function(m)
 	if m.sender == nil then
@@ -95,16 +119,22 @@ piepan.On("message", function(m)
 				end
 				addup:Send("Dumped by " .. m.Sender.Name, true)
 			end
-			if m.Message == "!roll" then
+			if string.find(m.Message, "!roll", 1) == 1 then				  --piepan is not on par with discord bot libraries, so there is no sort of command feature to speak of. Since there are no built-in command functions, if you want to use parameters you'll need to use substrings to identify pseudo-parameters.
 				if #addup.Users + #fatkids.Users < 1 then --checks if there are enough players to play (While Mumble counts users in a channel with children included, piepan strictly only counts the number of users in a specific channel. This is helpful).
 					addup:Send("Sorry, there are not enough players to do this pug.", true)
 				else
-					local n1 = roll()		--if i wrote the roll function correctly, it should keep rerolling until there are two unique medics, meaning it shouldnt proceed until it finds a valid medic.
-					local n2 = roll()
-					redMed = usersAlpha[n1] --redmedic is the nth user (the n1 value)
-					bluMed = usersAlpha[n2] --blumedic is the nth user, but with the other n value (n2)
-					addup:Send("Medics are " .. redMed .. " (" .. n1 .. ") and " .. bluMed .. " (" .. n2 .. ")", false) --sends the number and name of the Medics to addup channel.
-					addup:Send("Rolled by " .. m.Sender.Name, false) --transparency logging
+					generateUsersAlpha()
+					local toRoll
+					if #m.Message < 7 then
+						toRoll = 2
+					else
+						toRoll = tonumber(m.Message:sub(7))
+					end
+					while toRoll > 0 do
+						roll(randomTable(#addup.Users))
+						toRoll = toRoll - 1
+					end
+					addup:Send("Rolled by " .. m.Sender.Name, true) --transparency logging
 				end
 			end
 			if m.Message == "!s" then			--prints channels and their ids
@@ -114,11 +144,15 @@ piepan.On("message", function(m)
 			end
 			if m.Message == "!clearmh" then	--clears medic history
 				pastmedics = {}
+				addup:Send("Medic history cleared by " .. m.Sender.Name, true)
 			end
 			if m.Message == "!pmh" then		--prints every past medic (for debugging purposes)
 				for _,i in ipairs(pastmedics) do
 					print(i)
 				end
+			end
+			if m.Message == "!admins" then
+				root:RequestACL()
 			end
 			
 		end
