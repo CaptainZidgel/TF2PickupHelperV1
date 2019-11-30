@@ -16,7 +16,7 @@ admins = { --there should be an easier way to do this by simply grabbing the lis
 pastmedics = {}
 
 piepan.On("connect", function()
-	print("Loaded Poopy Joe")
+	print("Connection Established Successfully. Awaiting Commands...")
 	root = piepan.Channels[0]			--lua indexes at 1, but GO indexes at 0 so all gumble objects will index at 0.
 	addup = root:Find("Inhouse Pugs (Nut City)", "Add Up")
 	fatkids = root:Find("Inhouse Pugs (Nut City)", "Add Up", "Fat Kids")
@@ -100,6 +100,10 @@ piepan.On("message", function(m)
 	if m.sender == nil then
 		return
 	else
+		if m.Message == "!help" then
+			m.Sender:Send("<br />All Registered Users:<br />!help - This context menu<br />!name - Prints your name<br /><br />Administrators:<br />!roll - Rolls 2 Medics<br />!cdump 1 - Moves all users from Red/Blu Server 1 Channels to Add-Up<br />!pmh - View list of past medics<br />!clearmh - Clear past medics")
+		end
+
 		if m.Message == "!name" then
 			m.Sender.Channel:Send("Your name is " .. m.Sender.Name .. "!", false)
 		end
