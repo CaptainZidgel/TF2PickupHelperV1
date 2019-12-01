@@ -25,7 +25,11 @@ piepan.On("connect", function()
 	for _,u in piepan.Users() do
 		if u.Name ~= "BOT-Poopy-Joe" then
 			print("Found " .. u.Name .. ", listing in players table.")
-			players[u.Name:lower()] = {isHere = true, medicImmunity = false} --generate them
+			players[u.Name:lower()] = {
+			isHere = true, 
+			medicImmunity = false,
+			object = u
+			} --generate them
 		end
 	end
 end)
@@ -85,6 +89,19 @@ function roll(t)
 	print("Selecting medic: " .. userTesting)
 	addup:Send("Medic: " .. userTesting .. " (" .. t[i] .. ")", true)
 	players[userTesting].medicImmunity = true
+	--[[if #pugroomone.Users < 2 then
+		local red = pugroomone:Find("Red")
+		local blu = pugroomone:Find("Blu")
+		print("User name: " .. players[userTesting].object.Name)
+		if #red.Users == 0 then
+			players[userTesting].object:Move(red)
+		elseif #blu.Users == 0 then
+			print("poop")
+			players[userTesting].object:Move(blu)
+		end
+	else
+		print("Monkeynaut has crashed into CaptainZidgel's house and killed him")
+	end]]--
 	return i                               --returns the random number
 end
 
@@ -94,6 +111,17 @@ piepan.On("message", function(m)
 	else
 		if m.Message == "!name" then
 			m.Sender.Channel:Send("Your name is " .. m.Sender.Name .. "!", false)
+		end
+		if m.Message == "!hasimmunity" then
+			if players[m.Sender.Name:lower()].medicImmunity == true then
+				m.Sender.Channel:Send("You have medic immunity, " .. m.Sender.Name, true)
+			else
+				m.Sender.Channel:Send("You have no medic immunity, " .. m.Sender.Name .. "! Watch your back..", true)
+			end
+		end
+		if string.find(m.Message, "!volunteer", 1) == 1 then
+			local team = m.Message:sub(12, 14)
+			local room = m.Message:sub(16)
 		end
 		if senderIsAdmin(m.sender) then
 			if string.find(m.Message, "!echo ", 1) == 1 then
@@ -129,13 +157,10 @@ piepan.On("message", function(m)
 					addup:Send("Rolled by " .. m.Sender.Name, true) --transparency logging
 				end
 			end
-			if m.Message == "!s" then			--prints channels and their ids
-				for i,c in piepan.Channels() do
-					print(c.Name .. " " .. c.ID)
-				end
-			end
 			if m.Message == "!clearmh" then	--clears medic history
-				pastmedics = {}
+				for k,v in pairs(players) do
+					v.medicImmunity = false
+				end
 				addup:Send("Medic history cleared by " .. m.Sender.Name, true)
 			end
 			if m.Message == "!pmh" then		--prints every past medic (for debugging purposes)
@@ -143,14 +168,10 @@ piepan.On("message", function(m)
 					print(i)
 				end
 			end
-			if m.Message == "!admins" then
-				root:RequestACL()
-			end
 			if string.find(m.Message, "!strike", 1) == 1 then
 				local player = m.Message:sub(9)
 				players[player:lower()].medicImmunity = false
 				addup:Send(m.Sender.Name .. " strikes " .. player .. " from Medic history", true)
-				addup:Send(tostring(players[player:lower()].medicImmunity), true)
 			end
 			if string.find(m.Message, "!ami", 1) == 1 then
 				local player = m.Message:sub(6):lower()
