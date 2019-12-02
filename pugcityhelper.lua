@@ -192,7 +192,7 @@ piepan.On("userchange", function(u) --userchange has to be lowercase
 		connectlobby:Send("Hello " .. u.User.Name, true)--u.User is the user who triggered the event
 		local individual = u.User.Name:lower()			--user 'individual' has the name of the connected user in all lowercase
 		if players[individual] == nil then				--if user is not saved to the table
-			players[individual] = {isHere = true, medicImmunity = false} --generate them
+			players[individual] = {isHere = true, medicImmunity = false, object = u.User} --generate them
 		else
 			players[individual].isHere = true			--otherwise, modify table (Don't clear med immunity)
 		end
