@@ -195,6 +195,7 @@ piepan.On("userchange", function(u) --userchange has to be lowercase
 			players[individual] = {isHere = true, medicImmunity = false, object = u.User} --generate them
 		else
 			players[individual].isHere = true			--otherwise, modify table (Don't clear med immunity)
+			players[individual].object = u.User
 		end
 	end
 	if u.IsDisconnected then							--a user disconnect event
