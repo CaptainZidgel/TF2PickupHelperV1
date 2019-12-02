@@ -10,10 +10,8 @@ admins = { --there should be an easier way to do this by simply grabbing the lis
 "Dale"
 }
 
-pastmedics = {}
-
 piepan.On("connect", function()
-	print("Loaded Poopy Joe")
+	print("Connection Established Successfully. Awaiting Commands...")
 	root = piepan.Channels[0]			--lua indexes at 1, but GO indexes at 0 so all gumble objects will index at 0.
 	addup = root:Find("Inhouse Pugs (Nut City)", "Add Up")
 	fatkids = root:Find("Inhouse Pugs (Nut City)", "Add Up", "Fat Kids")
@@ -22,16 +20,18 @@ piepan.On("connect", function()
 	connectlobby = root:Find("Inhouse Pugs (Nut City)", "Connection Lobby")
 	piepan.Self:Move(spacebase)
 	players = {}
-	for _,u in piepan.Users() do
-		if u.Name ~= "BOT-Poopy-Joe" then
-			print("Found " .. u.Name .. ", listing in players table.")
-			players[u.Name:lower()] = {
-			isHere = true, 
-			medicImmunity = false,
-			object = u
-			} --generate them
-		end
+	for _,u in piepan:Users() do
+		print("Found " .. u.Name .. ", listing in players table.")
+		players[u.Name:lower()] = {
+		isHere = true, 
+		medicImmunity = false,
+		object = u
+		} --generate them
 	end
+	channelLens = {
+		redOneLen = 0,
+		bluOneLen = 0
+	}
 end)
 
 function senderIsAdmin(s)
@@ -52,18 +52,18 @@ end
 
 function randomTable(n)
 	math.randomseed(os.time())
-	local ordered = {}			--ignore the name. just pretend it says "table". by the end of this, the "ordered" table will be completely random.
+	local t = {}
 	for i = 1, n, 1 do
-		table.insert(ordered, i)
+		table.insert(t, i)
 	end
 	local r, tmp
-	for i = 1, #ordered do			--for every item in ordered table
-		r = math.random(i, #ordered)--r becomes a random number that is the length of ordered or less
-		tmp = ordered[i]			--tmp var stores the ith value of ordered
-		ordered[i] = ordered[r]		--the ith space of ordered is replaced with the rth item
-		ordered[r] = tmp			--the rth item becomes the ith item. graph: https://imgur.com/a/6pnEMRf
+	for i = 1, #t do			--for every item in table
+		r = math.random(i, #t)	--r becomes a random number that is the length of ordered or less
+		tmp = t[i]				--tmp var stores the ith value of ordered
+		t[i] = t[r]		--the ith space of ordered is replaced with the rth item
+		t[r] = tmp				--the rth item becomes the ith item. graph: https://imgur.com/a/6pnEMRf
 	end
-	return ordered
+	return t
 end
 
 function roll(t)
@@ -89,39 +89,39 @@ function roll(t)
 	print("Selecting medic: " .. userTesting)
 	addup:Send("Medic: " .. userTesting .. " (" .. t[i] .. ")", true)
 	players[userTesting].medicImmunity = true
-	--[[if #pugroomone.Users < 2 then
+	local c = channelLens
+	if c.redOneLen + c.bluOneLen < 2 then
 		local red = pugroomone:Find("Red")
 		local blu = pugroomone:Find("Blu")
-		print("User name: " .. players[userTesting].object.Name)
-		if #red.Users == 0 then
+		print("Moving: " .. players[userTesting].object.Name)
+		if c.redOneLen == 0 then
 			players[userTesting].object:Move(red)
-		elseif #blu.Users == 0 then
-			print("poop")
+			c.redOneLen = c.redOneLen + 1
+		else
 			players[userTesting].object:Move(blu)
 		end
 	else
 		print("Monkeynaut has crashed into CaptainZidgel's house and killed him")
-	end]]--
-	return i                               --returns the random number
+	end
+	
 end
 
 piepan.On("message", function(m)
 	if m.sender == nil then
 		return
 	else
+		if m.Message == "!help" then
+			m.Sender:Send("<br />All Registered Users:<br />!help - This context menu<br />!name - Prints your name<br />!pmh - View list of past medics<br /><br />Administrators:<br />!roll - Rolls 2 Medics<br />!cdump 1 - Moves all users from Red/Blu Server 1 Channels to Add-Up<br />!clearmh - Clear past medics")
+		end
 		if m.Message == "!name" then
 			m.Sender.Channel:Send("Your name is " .. m.Sender.Name .. "!", false)
 		end
-		if m.Message == "!hasimmunity" then
-			if players[m.Sender.Name:lower()].medicImmunity == true then
-				m.Sender.Channel:Send("You have medic immunity, " .. m.Sender.Name, true)
-			else
-				m.Sender.Channel:Send("You have no medic immunity, " .. m.Sender.Name .. "! Watch your back..", true)
+		if m.Message == "!pmh" then
+			for n,u in pairs(players) do
+				if u.medicImmunity then
+					m.Sender.Channel:Send(n, false)
+				end
 			end
-		end
-		if string.find(m.Message, "!volunteer", 1) == 1 then
-			local team = m.Message:sub(12, 14)
-			local room = m.Message:sub(16)
 		end
 		if senderIsAdmin(m.sender) then
 			if string.find(m.Message, "!echo ", 1) == 1 then
@@ -138,9 +138,10 @@ piepan.On("message", function(m)
 					u:Move(addup)
 				end
 				addup:Send("Dumped by " .. m.Sender.Name, true)
+				channelLens.redOneLen, channelLens.bluOneLen = 0, 0
 			end
-			if string.find(m.Message, "!roll", 1) == 1 then				  --piepan is not on par with discord bot libraries, so there is no sort of command feature to speak of. Since there are no built-in command functions, if you want to use parameters you'll need to use substrings to identify pseudo-parameters.
-				if #addup.Users + #fatkids.Users < 1 then --checks if there are enough players to play (While Mumble counts users in a channel with children included, piepan strictly only counts the number of users in a specific channel. This is helpful).
+			if string.find(m.Message, "!roll", 1) == 1 then				  --Since there are no built-in command functions, if you want to use parameters you'll need to use substrings to identify pseudo-parameters.
+				if #addup.Users + #fatkids.Users < 1 then --checks if there are enough players to play (piepan strictly only counts the number of users in a specific channel).
 					addup:Send("Sorry, there are not enough players to do this pug.", true)
 				else
 					generateUsersAlpha()
@@ -150,11 +151,12 @@ piepan.On("message", function(m)
 					else
 						toRoll = tonumber(m.Message:sub(7))
 					end
+					local red = pugroomone:Find("Red")
 					while toRoll > 0 do
 						roll(randomTable(#addup.Users))
 						toRoll = toRoll - 1
 					end
-					addup:Send("Rolled by " .. m.Sender.Name, true) --transparency logging
+					addup:Send("Rolled by " .. m.Sender.Name, true)
 				end
 			end
 			if m.Message == "!clearmh" then	--clears medic history
@@ -162,11 +164,6 @@ piepan.On("message", function(m)
 					v.medicImmunity = false
 				end
 				addup:Send("Medic history cleared by " .. m.Sender.Name, true)
-			end
-			if m.Message == "!pmh" then		--prints every past medic (for debugging purposes)
-				for _,i in ipairs(pastmedics) do
-					print(i)
-				end
 			end
 			if string.find(m.Message, "!strike", 1) == 1 then
 				local player = m.Message:sub(9)
