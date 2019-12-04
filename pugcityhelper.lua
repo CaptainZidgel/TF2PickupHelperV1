@@ -28,7 +28,7 @@ piepan.On("connect", function()
 		object = u,
 		lastChannel = u.Channel,
 		dontUpdate = false
-		} --generate them
+		}
 	end
 	channelTable = {
 		room1 = {
@@ -298,6 +298,15 @@ piepan.On("message", function(m)
 	end
 end)
 
+function pcl()
+	print("--------------------------------------")
+	print("       Red 1 Length: " .. channelTable.room1.red.length .. " Red 2: ".. channelTable.room2.red.length.. " Red 3: " .. channelTable.room3.red.length)
+	print("       Blu 1 Length: " .. channelTable.room1.blu.length .. " Blu 2: ".. channelTable.room2.blu.length.. " Blu 3: " .. channelTable.room3.blu.length)
+	print("Red 1 Actual Length: " .. #channelTable.room1.red.object.Users .. " Red 2: " .. #channelTable.room2.red.object.Users .. " Red 3: " .. #channelTable.room3.red.object.Users)
+	print("Blu 1 Actual Length: " .. #channelTable.room1.blu.object.Users .. " Blu 2: " .. #channelTable.room2.blu.object.Users .. " Blu 3: " .. #channelTable.room3.blu.object.Users)
+	print("--------------------------------------")
+end
+
 piepan.On("userchange", function(u) --userchange has to be lowercase
 	if u.IsConnected then			--a user connection event
 		print(u.User.Name .. " has connected")
@@ -310,9 +319,9 @@ piepan.On("userchange", function(u) --userchange has to be lowercase
 			object = u.User,
 			lastChannel = u.Channel,
 			dontUpdate = false
-			} --generate them
+			}
 		else
-			players[individual].isHere = true			--otherwise, modify table (Don't clear med immunity)
+			players[individual].isHere = true
 			players[individual].object = u.User	
 		end
 	end
@@ -326,7 +335,7 @@ piepan.On("userchange", function(u) --userchange has to be lowercase
 		if o.dontUpdate == false then
 			local lC = o.lastChannel
 			local ct = channelTable
-			if u.User.Channel == channelTable.room1.red.object then
+			if u.User.Channel == channelTable.room1.red.object then						--this "deck" of if statements defines 'if the user's new channel is a room's team channel, increase length of the channel'
 				channelTable.room1.red.length = channelTable.room1.red.length + 1
 			elseif u.User.Channel == channelTable.room1.blu.object then
 				channelTable.room1.blu.length = channelTable.room1.blu.length + 1
@@ -334,21 +343,28 @@ piepan.On("userchange", function(u) --userchange has to be lowercase
 				channelTable.room2.red.length = channelTable.room2.red.length + 1
 			elseif u.User.Channel == channelTable.room2.blu.object then
 				channelTable.room2.blu.length = channelTable.room2.blu.length + 1
-			else
-				if lC == ct.room1.red.object then
-					ct.room1.red.length = ct.room1.red.length - 1
-				elseif lC == ct.room2.red.object then
-					ct.room2.red.length = ct.room2.red.length - 1
-				elseif lC == ct.room1.blu.object then
-					ct.room1.blu.length = ct.room1.blu.length - 1
-				elseif lC == ct.room2.blu.object then
-					ct.room2.blu.length = ct.room2.blu.length - 1
-				end
+			elseif u.User.Channel == channelTable.room3.red.object then
+				channelTable.room3.red.length = channelTable.room3.red.length + 1
+			elseif u.User.Channel == channelTable.room3.blu.object then
+				channelTable.room3.blu.length = channelTable.room3.blu.length + 1
+			end																	
+			if lC == ct.room1.red.object then											--if last channel was a room's team channel, subtract length by one.
+				ct.room1.red.length = ct.room1.red.length - 1
+			elseif lC == ct.room2.red.object then
+				ct.room2.red.length = ct.room2.red.length - 1
+			elseif lC == ct.room3.red.object then
+				ct.room3.red.length = ct.room3.red.length - 1
+			elseif lC == ct.room1.blu.object then
+				ct.room1.blu.length = ct.room1.blu.length - 1
+			elseif lC == ct.room2.blu.object then
+				ct.room2.blu.length = ct.room2.blu.length - 1
+			elseif lC == ct.room3.blu.object then
+				ct.room3.blu.length = ct.room3.blu.length - 1
 			end
 		else
 			o.dontUpdate = false
 		end
+		--pcl() --this is some extremely verbose logging used for debugging the length variable
 		o.lastChannel = u.User.Channel
-		print(channelTable.room1.red.length)
 	end
 end)
