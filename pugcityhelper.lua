@@ -8,7 +8,8 @@ admins = { --there should be an easier way to do this by simply grabbing the lis
 "YungSally",
 "Console-",
 "Dale",
-"dave2"
+"dave2",
+"BOT-PoopyJoe-Helper"
 }
 
 piepan.On("connect", function()
@@ -30,6 +31,7 @@ piepan.On("connect", function()
 		dontUpdate = false
 		}
 	end
+	motd = "Hello!"
 	channelTable = {
 		room1 = {
 			red = {
@@ -195,7 +197,17 @@ piepan.On("message", function(m)
 			if m.Sender.Channel == addup or m.Sender.Channel == fatkids then
 				local team = m.Message:sub(12, 14)
 				local room = tonumber(m.Message:sub(16, 16))
-				if room == 1 then room = channelTable.room1 elseif room == 2 then room = channelTable.room2 elseif room == 3 then room = channelTable.room3 end
+				if room == nil then
+					if #channelTable.room1.red.object.Users + #channelTable.room2.red.object.Users < 3 then
+						room = channelTable.room1
+					elseif #channelTable.room2.red.object.Users + #channelTable.room2.blu.object.Users < 3 then
+						room = channelTable.room2
+					elseif #channelTable.room3.red.object.Users + #channelTable.room3.blu.object.Users < 3 then
+						room = channelTable.room3
+					end
+				else
+					if room == 1 then room = channelTable.room1 elseif room == 2 then room = channelTable.room2 elseif room == 3 then room = channelTable.room3 end
+				end
 				if room.red.length + room.blu.length < 3 then
 					if team == "red" then
 						team = room.red.object
@@ -213,7 +225,7 @@ piepan.On("message", function(m)
 					addup:Send("Sorry, you can't volunteer for medic since picks have already begun!", false)
 				end
 			else
-				m.Sender:Send("You can't volunteer! You're already medic!")
+				m.Sender:Send("You can't volunteer! You're not in addup or you're already medic!")
 			end
 		end
 		if senderIsAdmin(m.sender) then
@@ -239,7 +251,6 @@ piepan.On("message", function(m)
 				addup:Send("Channel " .. cnl .. " dumped by " .. m.Sender.Name, true)
 				red:Link(addup)
 				blu:Link(addup)
-				--room.red.length, room.blu.length = 0,0
 			end
 			if string.find(m.Message:lower(), "!roll", 1) == 1 then	
 				if #addup.Users + #fatkids.Users < 1 then
@@ -294,6 +305,9 @@ piepan.On("message", function(m)
 				math.randomseed(os.time())
 				m.Sender.Channel:Send(tostring(math.random(tonumber(n1), tonumber(n2))), true)
 			end
+			if string.find(m.Message, "!setmotd", 1) == 1 then
+				motd = m.Message:sub(10)
+			end
 		end
 	end
 end)
@@ -310,7 +324,7 @@ end
 piepan.On("userchange", function(u) --userchange has to be lowercase
 	if u.IsConnected then			--a user connection event
 		print(u.User.Name .. " has connected")
-		connectlobby:Send("Hello " .. u.User.Name, true)--u.User is the user who triggered the event
+		u.User:Send(motd)
 		local individual = u.User.Name:lower()			--user 'individual' has the name of the connected user in all lowercase
 		if players[individual] == nil then				--if user is not saved to the table
 			players[individual] = {
