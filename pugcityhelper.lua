@@ -7,7 +7,6 @@ admins = { --there should be an easier way to do this by simply grabbing the lis
 "Okiewaka",
 "YungSally",
 "Console-",
-"Dale",
 "dave2",
 "BOT-PoopyJoe-Helper"
 }
@@ -31,7 +30,7 @@ piepan.On("connect", function()
 		dontUpdate = false
 		}
 	end
-	motd = "Hello!"
+	motd = "Hello and welcome to Nut City Pugs! Please make sure your game is updated and you can connect to servers. The connect information is in the comments for each server channel."
 	channelTable = {
 		room1 = {
 			red = {
@@ -64,9 +63,11 @@ piepan.On("connect", function()
 			}
 		}
 	}
+	stripSpace = true
+	verboseChannelLogging = false
 end)
 
-function senderIsAdmin(s)
+function isAdmin(s)
 	for i,v in ipairs(admins) do
 		if v:lower() == s.Name:lower() and s:IsRegistered() then --case insensitive, make sure user is registered for safety
 			return true
@@ -176,6 +177,11 @@ function roll(t)
 end
 
 piepan.On("message", function(m)
+	if stripSpace then				
+		m.Message = m.Message:gsub("<.+>", "")	--firstly, strip line break tags added by mumble
+		m.Message = m.Message:gsub("\n*", "")	--secondly, strip the newlines added by user
+		m.Message = m.Message:gsub("%s$", "")	--thirdly, strip all trailing spaces after newlines have been removed.
+	end
 	if m.sender == nil then
 		return
 	else
@@ -228,7 +234,7 @@ piepan.On("message", function(m)
 				m.Sender:Send("You can't volunteer! You're not in addup or you're already medic!")
 			end
 		end
-		if senderIsAdmin(m.sender) then
+		if isAdmin(m.sender) then
 			if string.find(m.Message:lower(), "!cdump ", 1) == 1 then
 				local cnl = tonumber(m.Message:sub(8))
 				local room
@@ -261,7 +267,7 @@ piepan.On("message", function(m)
 					if #m.Message < 7 then
 						toRoll = 2
 					else
-						toRoll = tonumber(m.Message:sub(7))
+						toRoll = tonumber(m.Message:sub(7,7))
 					end
 					while toRoll > 0 do
 						roll(randomTable(#addup.Users))
@@ -285,7 +291,7 @@ piepan.On("message", function(m)
 			end	
 			if string.find(m.Message:lower(), "!strike", 1) == 1 then
 				local player = m.Message:sub(9)
-				players[player].medicImmunity = false
+				players[player:lower()].medicImmunity = false
 				print(m.Sender.Name .. " strikes " .. player)
 				addup:Send(m.Sender.Name .. " strikes " .. player .. " from Medic history", true)
 			end
@@ -308,20 +314,85 @@ piepan.On("message", function(m)
 			if string.find(m.Message, "!setmotd", 1) == 1 then
 				motd = m.Message:sub(10)
 			end
+			if string.find(m.Message, "!unlink", 1) == 1 then
+				local room = tonumber(m.Message:sub(9))
+				if room == 1 then
+					room = channelTable.room1
+				elseif room == 2 then
+					room = channelTable.room2
+				elseif room == 3 then
+					room = channelTable.room3
+				end
+				local red = room.red.object
+				local blu = room.blu.object
+				addup:Unlink(blu)
+				addup:Unlink(red)
+				blu:Unlink(red)
+			end
+			if string.find(m.Message, "!link", 1) == 1 then
+				local room = tonumber(m.Message:sub(7))
+				if room == 1 then
+					room = channelTable.room1
+				elseif room == 2 then
+					room = channelTable.room2
+				elseif room == 3 then
+					room = channelTable.room3
+				end
+				local red = room.red.object
+				local blu = room.blu.object
+				addup:link(blu)
+				addup:link(red)
+				blu:link(red)
+			end
+			if string.find(m.Message, "!toggle", 1) == 1 then
+				if m.Message:sub(9) == "strip" then
+					stripSpace = not stripSpace
+					m.Sender:Send("Toggled space stripping to " .. stripSpace)
+				elseif m.Message:sub(9) == "vcl" then
+					verboseChannelLogging = not verboseChannelLogging
+					m.Sender:Send("Toggled verbose channel debugging to " .. verboseChannelLogging)
+				end
+			end
+			if string.find(m.Message, "mute") then
+				local b
+				if m.Message == "!mute" then
+					b = true
+				elseif m.Message == "!unmute" then
+					b = false
+				else
+					return
+				end
+				for k,v in addup:Users() do
+					if not isAdmin(v) then
+						v:SetMuted(b)
+					end
+				end
+				for k,v in addup:Links() do
+					for i,o in v:Users() do
+						if not isAdmin(o) then
+							o:SetMuted(b)
+						end
+					end
+				end
+			end
 		end
 	end
 end)
 
-function pcl()
-	print("--------------------------------------")
-	print("       Red 1 Length: " .. channelTable.room1.red.length .. " Red 2: ".. channelTable.room2.red.length.. " Red 3: " .. channelTable.room3.red.length)
-	print("       Blu 1 Length: " .. channelTable.room1.blu.length .. " Blu 2: ".. channelTable.room2.blu.length.. " Blu 3: " .. channelTable.room3.blu.length)
-	print("Red 1 Actual Length: " .. #channelTable.room1.red.object.Users .. " Red 2: " .. #channelTable.room2.red.object.Users .. " Red 3: " .. #channelTable.room3.red.object.Users)
-	print("Blu 1 Actual Length: " .. #channelTable.room1.blu.object.Users .. " Blu 2: " .. #channelTable.room2.blu.object.Users .. " Blu 3: " .. #channelTable.room3.blu.object.Users)
-	print("--------------------------------------")
+function pcl(reason)
+	if verboseChannelLogging then
+		print(reason)
+		print("--------------------------------------")
+		print("       Red 1 Length: " .. channelTable.room1.red.length .. " Red 2: ".. channelTable.room2.red.length.. " Red 3: " .. channelTable.room3.red.length)
+		print("       Blu 1 Length: " .. channelTable.room1.blu.length .. " Blu 2: ".. channelTable.room2.blu.length.. " Blu 3: " .. channelTable.room3.blu.length)
+		print("Red 1 Actual Length: " .. #channelTable.room1.red.object.Users .. " Red 2: " .. #channelTable.room2.red.object.Users .. " Red 3: " .. #channelTable.room3.red.object.Users)
+		print("Blu 1 Actual Length: " .. #channelTable.room1.blu.object.Users .. " Blu 2: " .. #channelTable.room2.blu.object.Users .. " Blu 3: " .. #channelTable.room3.blu.object.Users)
+		print("--------------------------------------")
+	end
 end
 
 piepan.On("userchange", function(u) --userchange has to be lowercase
+	pcl("BEFORE ANY EVENT IS EVALUATED: ")
 	if u.IsConnected then			--a user connection event
 		print(u.User.Name .. " has connected")
 		u.User:Send(motd)
@@ -340,9 +411,24 @@ piepan.On("userchange", function(u) --userchange has to be lowercase
 		end
 	end
 	if u.IsDisconnected then							--a user disconnect event
+			if u.User.Channel == channelTable.room1.red.object then						--this "deck" of if statements defines 'if the user's new channel is a room's team channel, increase length of the channel'
+				channelTable.room1.red.length = channelTable.room1.red.length - 1
+			elseif u.User.Channel == channelTable.room1.blu.object then
+				channelTable.room1.blu.length = channelTable.room1.blu.length - 1
+			elseif u.User.Channel == channelTable.room2.red.object then
+				channelTable.room2.red.length = channelTable.room2.red.length - 1
+			elseif u.User.Channel == channelTable.room2.blu.object then
+				channelTable.room2.blu.length = channelTable.room2.blu.length - 1
+			elseif u.User.Channel == channelTable.room3.red.object then
+				channelTable.room3.red.length = channelTable.room3.red.length - 1
+			elseif u.User.Channel == channelTable.room3.blu.object then
+				channelTable.room3.blu.length = channelTable.room3.blu.length - 1
+			end	
 		print(u.User.Name .. " has disconnected.")
+		pcl("DISCONNECT:")
 		local individual = u.User.Name:lower()
 		players[individual].isHere = false				--this user is no longer here
+		players[individual].dontUpdate = true
 	end
 	if u.IsChangeChannel then
 		local o = players[u.User.Name:lower()]
@@ -378,7 +464,7 @@ piepan.On("userchange", function(u) --userchange has to be lowercase
 		else
 			o.dontUpdate = false
 		end
-		--pcl() --this is some extremely verbose logging used for debugging the length variable
+		pcl("AFTER CHANNEL CHANGE: ")
 		o.lastChannel = u.User.Channel
 	end
 end)
