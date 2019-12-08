@@ -201,7 +201,7 @@ piepan.On("message", function(m)
 		end
 		if string.find(m.Message:lower(), "!volunteer", 1) == 1 then	--"!volunteer red 1"
 			if m.Sender.Channel == addup or m.Sender.Channel == fatkids then
-				local team = m.Message:sub(12, 14)
+				local team = m.Message:sub(12, 14):lower()
 				local room = tonumber(m.Message:sub(16, 16))
 				if room == nil then
 					if #channelTable.room1.red.object.Users + #channelTable.room2.red.object.Users < 3 then
@@ -347,10 +347,10 @@ piepan.On("message", function(m)
 			if string.find(m.Message, "!toggle", 1) == 1 then
 				if m.Message:sub(9) == "strip" then
 					stripSpace = not stripSpace
-					m.Sender:Send("Toggled space stripping to " .. stripSpace)
+					m.Sender:Send("Toggled space stripping to " .. tostring(stripSpace))
 				elseif m.Message:sub(9) == "vcl" then
 					verboseChannelLogging = not verboseChannelLogging
-					m.Sender:Send("Toggled verbose channel debugging to " .. verboseChannelLogging)
+					m.Sender:Send("Toggled verbose channel debugging to " .. tostring(verboseChannelLogging))
 				end
 			end
 			if string.find(m.Message, "mute") then
