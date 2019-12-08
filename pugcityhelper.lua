@@ -7,7 +7,8 @@ admins = { --there should be an easier way to do this by simply grabbing the lis
 "Okiewaka",
 "YungSally",
 "Console-",
-"Dale"
+"dave2",
+"BOT-PoopyJoe-Helper"
 }
 
 piepan.On("connect", function()
@@ -16,7 +17,6 @@ piepan.On("connect", function()
 	addup = root:Find("Inhouse Pugs (Nut City)", "Add Up")
 	fatkids = root:Find("Inhouse Pugs (Nut City)", "Add Up", "Fat Kids")
 	spacebase = root:Find("Inhouse Pugs (Nut City)", "Poopy Joes Space Base")
-	pugroomone = root:Find("Inhouse Pugs (Nut City)", "Add Up", "Pug Server 1")
 	connectlobby = root:Find("Inhouse Pugs (Nut City)", "Connection Lobby")
 	piepan.Self:Move(spacebase)
 	players = {}
@@ -25,16 +25,49 @@ piepan.On("connect", function()
 		players[u.Name:lower()] = {
 		isHere = true, 
 		medicImmunity = false,
-		object = u
-		} --generate them
+		object = u,
+		lastChannel = u.Channel,
+		dontUpdate = false
+		}
 	end
-	channelLens = {
-		redOneLen = 0,
-		bluOneLen = 0
+	motd = "Hello and welcome to Nut City Pugs! Please make sure your game is updated and you can connect to servers. The connect information is in the comments for each server channel."
+	channelTable = {
+		room1 = {
+			red = {
+				object = addup:Find("Pug Server 1", "Red"),
+				length = #addup:Find("Pug Server 1", "Red").Users
+			},
+			blu = {
+				object = addup:Find("Pug Server 1", "Blu"),
+				length = #addup:Find("Pug Server 1", "Blu").Users
+			}
+		},
+		room2 = {
+			red = {
+				object = addup:Find("Pug Server 2", "Red"),
+				length = #addup:Find("Pug Server 2", "Red").Users
+			},
+			blu = {
+				object = addup:Find("Pug Server 2", "Blu"),
+				length = #addup:Find("Pug Server 2", "Blu").Users
+			}
+		},
+		room3 = {
+			red = {
+				object = addup:Find("Pug Server 3", "Red"),
+				length = #addup:Find("Pug Server 3", "Red").Users
+			},
+			blu = {
+				object = addup:Find("Pug Server 3", "Blu"),
+				length = #addup:Find("Pug Server 3", "Blu").Users
+			}
+		}
 	}
+	stripSpace = true
+	verboseChannelLogging = false
 end)
 
-function senderIsAdmin(s)
+function isAdmin(s)
 	for i,v in ipairs(admins) do
 		if v:lower() == s.Name:lower() and s:IsRegistered() then --case insensitive, make sure user is registered for safety
 			return true
@@ -70,6 +103,16 @@ function roll(t)
 	print("Trying to get a new medic pick...")
 	local i = 1
 	local userTesting
+	local c1, c2, c3 = channelTable.room1, channelTable.room2, channelTable.room3
+	if c1.red.length + c1.blu.length >= 2 then
+		if c2.red.length + c2.blu.length >= 2 then
+			if c3.red.length + c3.blu.length >= 2 then
+				addup:Send("You can't roll, there are already medics.", true)
+				print("Someone tried to roll but was denied due to sufficient players.")
+				return
+			end	
+		end		
+	end
 	while true do
 		if i > #addup.Users then		--if iterations surpasses the number of users added up
 			print("Run out of people to test")
@@ -88,60 +131,135 @@ function roll(t)
 	end
 	print("Selecting medic: " .. userTesting)
 	addup:Send("Medic: " .. userTesting .. " (" .. t[i] .. ")", true)
-	players[userTesting].medicImmunity = true
-	local c = channelLens
-	if c.redOneLen + c.bluOneLen < 2 then
-		local red = pugroomone:Find("Red")
-		local blu = pugroomone:Find("Blu")
-		print("Moving: " .. players[userTesting].object.Name)
-		if c.redOneLen == 0 then
-			players[userTesting].object:Move(red)
-			c.redOneLen = c.redOneLen + 1
-		else
-			players[userTesting].object:Move(blu)
+	local user = players[userTesting]
+	user.medicImmunity = true
+	if c1.red.length + c1.blu.length < 2 then
+		local red = c1.red
+		local blu = c1.blu
+		print("Moving: " .. user.object.Name)
+		if red.length <= 0 then
+			user.object:Move(red.object)
+			red.length = red.length + 1
+			user.dontUpdate = true
+		elseif blu.length <= 0 then
+			user.object:Move(blu.object)
+			blu.length = blu.length + 1
+			user.dontUpdate = true
 		end
-	else
-		print("Monkeynaut has crashed into CaptainZidgel's house and killed him")
+	elseif c2.red.length + c2.blu.length < 2 then
+		local red = c2.red
+		local blu = c2.blu
+		print("Moving: " .. user.object.Name)
+		if red.length <= 0 then
+			user.object:Move(red.object)
+			red.length = red.length + 1
+			user.dontUpdate = true
+		elseif blu.length <= 0 then
+			user.object:Move(blu.object)
+			blu.length = blu.length + 1
+			user.dontUpdate = true
+		end
+	elseif c3.red.length + c3.blu.length < 2 then
+		local red = c3.red.object
+		local blu = c3.blu.object
+		print("Moving: " .. user.object.Name)
+		if red.length <= 0 then
+			user.object:Move(red.object)
+			red.length = red.length + 1
+			user.dontUpdate = true
+		elseif blu.length <= 0 then
+			user.object:Move(blu.object)
+			blu.length = blu.length + 1
+			user.dontUpdate = true
+		end
 	end
-	
+	return
 end
 
 piepan.On("message", function(m)
+	if stripSpace then				
+		m.Message = m.Message:gsub("<.+>", "")	--firstly, strip line break tags added by mumble
+		m.Message = m.Message:gsub("\n*", "")	--secondly, strip the newlines added by user
+		m.Message = m.Message:gsub("%s$", "")	--thirdly, strip all trailing spaces after newlines have been removed.
+	end
 	if m.sender == nil then
 		return
 	else
-		if m.Message == "!help" then
+		print("MSG RECIEVED: " .. m.Sender.Name .. ": " .. m.Message)
+		if m.Message:lower() == "!help" then
 			m.Sender:Send("<br />All Registered Users:<br />!help - This context menu<br />!name - Prints your name<br />!pmh - View list of past medics<br /><br />Administrators:<br />!roll - Rolls 2 Medics<br />!cdump 1 - Moves all users from Red/Blu Server 1 Channels to Add-Up<br />!clearmh - Clear past medics")
 		end
-		if m.Message == "!name" then
+		if m.Message:lower() == "!name" then
 			m.Sender.Channel:Send("Your name is " .. m.Sender.Name .. "!", false)
 		end
-		if m.Message == "!pmh" then
+		if m.Message:lower() == "!pmh" then
 			for n,u in pairs(players) do
 				if u.medicImmunity then
-					m.Sender.Channel:Send(n, false)
+					m.Sender:Send(n)
 				end
 			end
 		end
-		if senderIsAdmin(m.sender) then
-			if string.find(m.Message, "!echo ", 1) == 1 then
-				piepan.Self.Channel:Send(m.Message:sub(7), false)
+		if string.find(m.Message:lower(), "!volunteer", 1) == 1 then	--"!volunteer red 1"
+			if m.Sender.Channel == addup or m.Sender.Channel == fatkids then
+				local team = m.Message:sub(12, 14):lower()
+				local room = tonumber(m.Message:sub(16, 16))
+				if room == nil then
+					if #channelTable.room1.red.object.Users + #channelTable.room2.red.object.Users < 3 then
+						room = channelTable.room1
+					elseif #channelTable.room2.red.object.Users + #channelTable.room2.blu.object.Users < 3 then
+						room = channelTable.room2
+					elseif #channelTable.room3.red.object.Users + #channelTable.room3.blu.object.Users < 3 then
+						room = channelTable.room3
+					end
+				else
+					if room == 1 then room = channelTable.room1 elseif room == 2 then room = channelTable.room2 elseif room == 3 then room = channelTable.room3 end
+				end
+				if room.red.length + room.blu.length < 3 then
+					if team == "red" then
+						team = room.red.object
+					elseif team == "blu" then
+						team = room.blu.object
+					end			
+					addup:Send(m.Sender.Name .. " has volunteered as medic!", true)
+					for _,u in team:Users() do
+						players[u.Name:lower()].medicImmunity = false
+						u:Move(addup)
+					end
+					m.Sender:Move(team)
+					players[m.Sender.Name:lower()].medicImmunity = true
+				else
+					addup:Send("Sorry, you can't volunteer for medic since picks have already begun!", false)
+				end
+			else
+				m.Sender:Send("You can't volunteer! You're not in addup or you're already medic!")
 			end
-			if m.Message == "!cdump 1" then
+		end
+		if isAdmin(m.sender) then
+			if string.find(m.Message:lower(), "!cdump ", 1) == 1 then
+				local cnl = tonumber(m.Message:sub(8))
+				local room
+				if cnl == 1 then
+					room = channelTable.room1
+				elseif cnl == 2 then
+					room = channelTable.room2
+				elseif cnl == 3 then
+					room = channelTable.room3
+				end
 				m.Sender.Channel:Send("Attempting to dump channels...", true)
-				local red = pugroomone:Find("Red")
-				local blu = pugroomone:Find("Blu")
+				local red = room.red.object
+				local blu = room.blu.object
 				for _,u in red:Users() do -- "u" is one user
 					u:Move(addup)
 				end
 				for _,u in blu:Users() do
 					u:Move(addup)
 				end
-				addup:Send("Dumped by " .. m.Sender.Name, true)
-				channelLens.redOneLen, channelLens.bluOneLen = 0, 0
+				addup:Send("Channel " .. cnl .. " dumped by " .. m.Sender.Name, true)
+				red:Link(addup)
+				blu:Link(addup)
 			end
-			if string.find(m.Message, "!roll", 1) == 1 then				  --Since there are no built-in command functions, if you want to use parameters you'll need to use substrings to identify pseudo-parameters.
-				if #addup.Users + #fatkids.Users < 1 then --checks if there are enough players to play (piepan strictly only counts the number of users in a specific channel).
+			if string.find(m.Message:lower(), "!roll", 1) == 1 then	
+				if #addup.Users + #fatkids.Users < 1 then
 					addup:Send("Sorry, there are not enough players to do this pug.", true)
 				else
 					generateUsersAlpha()
@@ -149,9 +267,8 @@ piepan.On("message", function(m)
 					if #m.Message < 7 then
 						toRoll = 2
 					else
-						toRoll = tonumber(m.Message:sub(7))
+						toRoll = tonumber(m.Message:sub(7,7))
 					end
-					local red = pugroomone:Find("Red")
 					while toRoll > 0 do
 						roll(randomTable(#addup.Users))
 						toRoll = toRoll - 1
@@ -163,44 +280,191 @@ piepan.On("message", function(m)
 				for k,v in pairs(players) do
 					v.medicImmunity = false
 				end
-				addup:Send("Medic history cleared by " .. m.Sender.Name, true)
+				m.Sender.Channel:Send("Medic history cleared by " .. m.Sender.Name, true)
 			end
-			if string.find(m.Message, "!strike", 1) == 1 then
+			if string.find(m.Message, "!massadd", 1) == 1 then		--massively add users to med immunity, separated by comma. big boy bandaid.
+				local s = m.Message:sub(10)
+				for match in (s..','):gmatch("(.-)"..',') do
+					players[match:lower()].medicImmunity = true
+					print(match:lower() .. " now has medic immunity " .. tostring(players[match:lower()].medicImmunity))
+				end
+			end	
+			if string.find(m.Message:lower(), "!strike", 1) == 1 then
 				local player = m.Message:sub(9)
 				players[player:lower()].medicImmunity = false
+				print(m.Sender.Name .. " strikes " .. player)
 				addup:Send(m.Sender.Name .. " strikes " .. player .. " from Medic history", true)
 			end
-			if string.find(m.Message, "!ami", 1) == 1 then
-				local player = m.Message:sub(6):lower()
+			if string.find(m.Message:lower(), "!ami", 1) == 1 then
+				local player = m.Message:sub(6)
 				players[player].medicImmunity = true
+				print(m.Sender.Name .. " gives medic immunity to " .. player)
 				addup:Send(m.Sender.Name .. " has given " .. player .. " medic immunity!", true)
 			end
-			if m.Message == "!list" then
-				for k,v in pairs(players) do
-					print(k)
-					print(v.medicImmunity)
+			if m.Message == "update" then
+				channelTable.room1.red.length, channelTable.room1.blu.length = #addup:Find("Pug Server 1", "Red").Users, #addup:Find("Pug Server 1", "Blu").Users
+				channelTable.room2.red.length, channelTable.room2.blu.length = #addup:Find("Pug Server 2", "Red").Users, #addup:Find("Pug Server 2", "Blu").Users
+				channelTable.room3.red.length, channelTable.room3.blu.length = #addup:Find("Pug Server 3", "Red").Users, #addup:Find("Pug Server 3", "Blu").Users
+			end
+			if string.find(m.Message:lower(), "!rng ", 1) == 1 then
+				local n1, n2 = m.Message:sub(6, 6), m.Message:sub(8)
+				math.randomseed(os.time())
+				m.Sender.Channel:Send(tostring(math.random(tonumber(n1), tonumber(n2))), true)
+			end
+			if string.find(m.Message, "!setmotd", 1) == 1 then
+				motd = m.Message:sub(10)
+			end
+			if string.find(m.Message, "!unlink", 1) == 1 then
+				local room = tonumber(m.Message:sub(9))
+				if room == 1 then
+					room = channelTable.room1
+				elseif room == 2 then
+					room = channelTable.room2
+				elseif room == 3 then
+					room = channelTable.room3
+				end
+				local red = room.red.object
+				local blu = room.blu.object
+				addup:Unlink(blu)
+				addup:Unlink(red)
+				blu:Unlink(red)
+			end
+			if string.find(m.Message, "!link", 1) == 1 then
+				local room = tonumber(m.Message:sub(7))
+				if room == 1 then
+					room = channelTable.room1
+				elseif room == 2 then
+					room = channelTable.room2
+				elseif room == 3 then
+					room = channelTable.room3
+				end
+				local red = room.red.object
+				local blu = room.blu.object
+				addup:link(blu)
+				addup:link(red)
+				blu:link(red)
+			end
+			if string.find(m.Message, "!toggle", 1) == 1 then
+				if m.Message:sub(9) == "strip" then
+					stripSpace = not stripSpace
+					m.Sender:Send("Toggled space stripping to " .. tostring(stripSpace))
+				elseif m.Message:sub(9) == "vcl" then
+					verboseChannelLogging = not verboseChannelLogging
+					m.Sender:Send("Toggled verbose channel debugging to " .. tostring(verboseChannelLogging))
 				end
 			end
-			
+			if string.find(m.Message, "mute") then
+				local b
+				if m.Message == "!mute" then
+					b = true
+				elseif m.Message == "!unmute" then
+					b = false
+				else
+					return
+				end
+				for k,v in addup:Users() do
+					if not isAdmin(v) then
+						v:SetMuted(b)
+					end
+				end
+				for k,v in addup:Links() do
+					for i,o in v:Users() do
+						if not isAdmin(o) then
+							o:SetMuted(b)
+						end
+					end
+				end
+			end
 		end
 	end
 end)
 
+function pcl(reason)
+	if verboseChannelLogging then
+		print(reason)
+		print("--------------------------------------")
+		print("       Red 1 Length: " .. channelTable.room1.red.length .. " Red 2: ".. channelTable.room2.red.length.. " Red 3: " .. channelTable.room3.red.length)
+		print("       Blu 1 Length: " .. channelTable.room1.blu.length .. " Blu 2: ".. channelTable.room2.blu.length.. " Blu 3: " .. channelTable.room3.blu.length)
+		print("Red 1 Actual Length: " .. #channelTable.room1.red.object.Users .. " Red 2: " .. #channelTable.room2.red.object.Users .. " Red 3: " .. #channelTable.room3.red.object.Users)
+		print("Blu 1 Actual Length: " .. #channelTable.room1.blu.object.Users .. " Blu 2: " .. #channelTable.room2.blu.object.Users .. " Blu 3: " .. #channelTable.room3.blu.object.Users)
+		print("--------------------------------------")
+	end
+end
+
 piepan.On("userchange", function(u) --userchange has to be lowercase
+	pcl("BEFORE ANY EVENT IS EVALUATED: ")
 	if u.IsConnected then			--a user connection event
 		print(u.User.Name .. " has connected")
-		connectlobby:Send("Hello " .. u.User.Name, true)--u.User is the user who triggered the event
+		u.User:Send(motd)
 		local individual = u.User.Name:lower()			--user 'individual' has the name of the connected user in all lowercase
 		if players[individual] == nil then				--if user is not saved to the table
-			players[individual] = {isHere = true, medicImmunity = false, object = u.User} --generate them
+			players[individual] = {
+			isHere = true,
+			medicImmunity = false, 
+			object = u.User,
+			lastChannel = u.Channel,
+			dontUpdate = false
+			}
 		else
-			players[individual].isHere = true			--otherwise, modify table (Don't clear med immunity)
-			players[individual].object = u.User
+			players[individual].isHere = true
+			players[individual].object = u.User	
 		end
 	end
 	if u.IsDisconnected then							--a user disconnect event
+			if u.User.Channel == channelTable.room1.red.object then						--this "deck" of if statements defines 'if the user's new channel is a room's team channel, increase length of the channel'
+				channelTable.room1.red.length = channelTable.room1.red.length - 1
+			elseif u.User.Channel == channelTable.room1.blu.object then
+				channelTable.room1.blu.length = channelTable.room1.blu.length - 1
+			elseif u.User.Channel == channelTable.room2.red.object then
+				channelTable.room2.red.length = channelTable.room2.red.length - 1
+			elseif u.User.Channel == channelTable.room2.blu.object then
+				channelTable.room2.blu.length = channelTable.room2.blu.length - 1
+			elseif u.User.Channel == channelTable.room3.red.object then
+				channelTable.room3.red.length = channelTable.room3.red.length - 1
+			elseif u.User.Channel == channelTable.room3.blu.object then
+				channelTable.room3.blu.length = channelTable.room3.blu.length - 1
+			end	
 		print(u.User.Name .. " has disconnected.")
+		pcl("DISCONNECT:")
 		local individual = u.User.Name:lower()
 		players[individual].isHere = false				--this user is no longer here
+		players[individual].dontUpdate = true
+	end
+	if u.IsChangeChannel then
+		local o = players[u.User.Name:lower()]
+		if o.dontUpdate == false then
+			local lC = o.lastChannel
+			local ct = channelTable
+			if u.User.Channel == channelTable.room1.red.object then						--this "deck" of if statements defines 'if the user's new channel is a room's team channel, increase length of the channel'
+				channelTable.room1.red.length = channelTable.room1.red.length + 1
+			elseif u.User.Channel == channelTable.room1.blu.object then
+				channelTable.room1.blu.length = channelTable.room1.blu.length + 1
+			elseif u.User.Channel == channelTable.room2.red.object then
+				channelTable.room2.red.length = channelTable.room2.red.length + 1
+			elseif u.User.Channel == channelTable.room2.blu.object then
+				channelTable.room2.blu.length = channelTable.room2.blu.length + 1
+			elseif u.User.Channel == channelTable.room3.red.object then
+				channelTable.room3.red.length = channelTable.room3.red.length + 1
+			elseif u.User.Channel == channelTable.room3.blu.object then
+				channelTable.room3.blu.length = channelTable.room3.blu.length + 1
+			end																	
+			if lC == ct.room1.red.object then											--if last channel was a room's team channel, subtract length by one.
+				ct.room1.red.length = ct.room1.red.length - 1
+			elseif lC == ct.room2.red.object then
+				ct.room2.red.length = ct.room2.red.length - 1
+			elseif lC == ct.room3.red.object then
+				ct.room3.red.length = ct.room3.red.length - 1
+			elseif lC == ct.room1.blu.object then
+				ct.room1.blu.length = ct.room1.blu.length - 1
+			elseif lC == ct.room2.blu.object then
+				ct.room2.blu.length = ct.room2.blu.length - 1
+			elseif lC == ct.room3.blu.object then
+				ct.room3.blu.length = ct.room3.blu.length - 1
+			end
+		else
+			o.dontUpdate = false
+		end
+		pcl("AFTER CHANNEL CHANGE: ")
+		o.lastChannel = u.User.Channel
 	end
 end)
