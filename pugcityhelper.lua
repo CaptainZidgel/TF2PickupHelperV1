@@ -7,7 +7,8 @@ admins = { --there should be an easier way to do this by simply grabbing the lis
 "Okiewaka",
 "Console-",
 "dave2",
-"BOT-PoopyJoe-Helper"
+"BOT-PoopyJoe-Helper",
+"HEDGEHOG_HERO"
 }
 
 piepan.On("connect", function()
@@ -31,7 +32,7 @@ piepan.On("connect", function()
 		captain = false
 		}
 	end
-	motd = "Hello and welcome to Nut City Pugs! Please make sure your game is updated and you can connect to servers. The connect information is in the comments for each server channel."
+	motd = "Greetings pug citizens. While the RGL New Map Cup is in progress, nut.city will be allowing them the usage of our servers. Normal pugging shall resume around 9:30 PM EST. -wolsne"
 	channelTable = {
 		room1 = {
 			red = {
