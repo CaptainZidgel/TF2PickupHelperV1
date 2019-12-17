@@ -1,4 +1,7 @@
-# PugCityHelper is the Mumble Bot tailored for nut.city
+### PugCityHelper is the Mumble Bot tailored for nut.city
+
+# This is deprecated, please see https://github.com/nutcity/NutCityMumbleHelper
+
 Scripts written in Lua for [piepan](https://github.com/layeh/piepan) on the [Gumble](https://godoc.org/layeh.com/gumble/gumble) implementation of Mumble.
 
 ## Steps for installing and running:
